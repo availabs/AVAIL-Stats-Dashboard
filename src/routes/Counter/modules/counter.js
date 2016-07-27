@@ -23,6 +23,7 @@ export function increment (value = 1) {
 
 export const doubleAsync = () => {
   return (dispatch, getState) => {
+    console.log("testing")
     return new Promise((resolve) => {
       setTimeout(() => {
         dispatch(increment(getState().counter))
@@ -41,7 +42,10 @@ export const actions = {
 // Action Handlers
 // ------------------------------------
 const ACTION_HANDLERS = {
-  [COUNTER_INCREMENT]: (state, action) => state + action.payload
+  [COUNTER_INCREMENT]: (state, action) => {
+
+    return state + action.payload
+  }
 }
 
 // ------------------------------------
