@@ -10,7 +10,7 @@ export const RECEIVE_AVAILSTATS_DATA = 'RECEIVE_AVAILSTATS_DATA'
 export const loadStatsData = () => {
   return (dispatch) => {
     console.log("loading")
-    return fetch('https://6u06hlzjn0.execute-api.us-east-1.amazonaws.com/dev/function1')
+    return fetch('https://6u06hlzjn0.execute-api.us-east-1.amazonaws.com/dev/logins')
       .then(response => response.json())
       .then(json => dispatch(recieveStatsData(json)))
   }
