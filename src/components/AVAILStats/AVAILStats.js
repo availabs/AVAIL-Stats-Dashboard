@@ -15,21 +15,28 @@ var shape = require('d3-shape')
 var d3line = shape.line
 
 export class AVAILStats extends React.Component<void, Props, void> {
+  constructor () {
+    super()
+    this.state = {
+      interval: 30
+    }
+    this.renderGraph = this.renderGraph.bind(this)
+  }
 
   componentDidMount(){
-    if(Object.keys(this.props.AVAILStats).length == 0){
+    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
       console.log("empty")
-      return this.props.loadStatsData()
+      return this.props.loadStatsData(this.state.interval)
     }
-    this.renderGraph(this.props.AVAILStats.AVAILStats)    
+    this.renderGraph(this.props.AVAILStats[this.state.interval])    
   }
 
   componentDidUpdate(){
-    if(Object.keys(this.props.AVAILStats).length == 0){
+    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
       console.log("empty")
-      return this.props.loadStatsData()
+      return this.props.loadStatsData(this.state.interval)
     }
-    this.renderGraph(this.props.AVAILStats.AVAILStats)     
+    this.renderGraph(this.props.AVAILStats[this.state.interval])    
   }
 
   renderGraph(data){
@@ -40,7 +47,7 @@ export class AVAILStats extends React.Component<void, Props, void> {
         height = 450 - margin.top - margin.bottom;
 
 
-    console.log(data)
+    console.log("graph",this.props)
     var x = scaleTime()
         .range([0, width])
         .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }));
@@ -96,20 +103,23 @@ export class AVAILStats extends React.Component<void, Props, void> {
 
 
   render(){
-    if(Object.keys(this.props.AVAILStats).length == 0){
+    var scope = this;
+    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
       console.log("empty")
-      this.props.loadStatsData()
+      this.props.loadStatsData(this.state.interval)
       return <span />
     }
     var selectOptions = [{value:7,label:"7 Days"},{value:30,label:"30 Days"},{value:90,label:"90 Days"}]
 
     function selectChange (value){
-      
       console.log(value)
+      if(value){
+        scope.setState({interval:value.value})
+      }
     }
 
-
-    this.renderGraph(this.props.AVAILStats.AVAILStats)
+    console.log("render",this.props.AVAILStats[this.state.interval])
+    this.renderGraph(this.props.AVAILStats[this.state.interval])
     return (
       <div className="container">
         <span id="graphDiv" className="graphDiv"></span>
@@ -117,7 +127,7 @@ export class AVAILStats extends React.Component<void, Props, void> {
           <Select 
           className={classes['Select']}
           name="metroSelect"
-          value={selectOptions.filter(d => { return d.value === this.props.metroId })[0]}
+          value={selectOptions.filter(d => { return d.value === this.state.interval })[0]}
           options={selectOptions}
           onChange={selectChange} 
           placeholder="Interval Select"

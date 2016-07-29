@@ -7,19 +7,20 @@ import fetch from 'isomorphic-fetch'
 
 export const RECEIVE_AVAILSTATS_DATA = 'RECEIVE_AVAILSTATS_DATA'
 
-export const loadStatsData = () => {
+export const loadStatsData = (interval) => {
   return (dispatch) => {
     console.log("loading")
-    return fetch('https://6u06hlzjn0.execute-api.us-east-1.amazonaws.com/dev/logins')
+    console.log('https://6u06hlzjn0.execute-api.us-east-1.amazonaws.com/dev/logins/'+interval)
+    return fetch('https://6u06hlzjn0.execute-api.us-east-1.amazonaws.com/dev/logins/'+interval)
       .then(response => response.json())
-      .then(json => dispatch(recieveStatsData(json)))
+      .then(json => dispatch(recieveStatsData(json,interval)))
   }
 }
 
-export function recieveStatsData (value) {
+export function recieveStatsData (value,interval) {
   return {
     type: RECEIVE_AVAILSTATS_DATA,
-    payload: value
+    payload: [value,interval]
   }
 }
 
@@ -36,8 +37,7 @@ const ACTION_HANDLERS = {
   [RECEIVE_AVAILSTATS_DATA]: (state,action) => {
     var newState = Object.assign({},state);
 
-    console.log(action.payload)
-    newState.AVAILStats = action.payload;
+    newState[action.payload[1]] = action.payload[0];
 
     return newState;
   }

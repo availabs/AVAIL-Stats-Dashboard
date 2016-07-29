@@ -13,7 +13,7 @@ import AVAILStats from 'components/AVAILStats'
     implementing our wrapper around increment; the component doesn't care   */
 
 const mapActionCreators = {
-  loadStatsData: () => loadStatsData()
+  loadStatsData: (interval) => loadStatsData(interval)
 }
 
 const mapStateToProps = (state) => ({
