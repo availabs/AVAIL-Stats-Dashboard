@@ -144,17 +144,19 @@ export class AVAILStats extends React.Component<void, Props, void> {
 
     var svg = select("#root").select("span").append("svg")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom),
-        g = svg.append("g")
+        .attr("height", height + margin.top + margin.bottom)
+
+    var g = svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     svg.append("g")
         .attr("class", "axis axis--x")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(" + margin.left + "," + (height+margin.top) + ")")
         .call(axisBottom(x));
 
     svg.append("g")
         .attr("class", "axis axis--y")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
         .call(axisLeft(y))
       .append("text")
         .attr("class", "axis-title")
@@ -164,27 +166,48 @@ export class AVAILStats extends React.Component<void, Props, void> {
         .style("text-anchor", "end")
         .text("Price ($)");
 
+    var focus = g.append("g")
+        .attr("transform", "translate(-100,-100)")
+        .attr("class", "focus");
+
+    focus.append("circle")
+        .attr("r", 4.5)
+        .style("fill","purple")
+        .style("opacity","1");
+
+
     function mouseover(d){
+      var curDate = new Date(d.data.series);
+      focus.attr("transform", "translate(" + x(curDate) + "," + y(+d.data.count) + ")");
       var mouseLine = d.data.line
       select(mouseLine).style("stroke-width","4px")
     }
     function mouseout(d){
       var mouseLine = d.data.line
       select(mouseLine).style("stroke-width","2px")
+      focus.attr("transform", "translate(-100,-100)");
     }
 
-    if(this.state.graph == "logins"){
+    function drawLine(data,color){
       var curLine;
+
+      var curColor = color ? color : "black"
+
       svg.append("path")
           .attr("class", "line")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
           .attr("d", function(){curLine = this; data.line = curLine; return line(data)})
           .style("fill","none")
-          .style("stroke","black")
-          .style("stroke-width","2px")            
+          .style("stroke",curColor)
+          .style("stroke-width","2px")  
 
       data.forEach(element => {
         element.line = curLine;
-      })             
+      })            
+    }
+
+    if(this.state.graph == "logins"){
+      drawLine(data)     
     }
     else{
       Object.keys(inputData).forEach(series => {
@@ -198,43 +221,22 @@ export class AVAILStats extends React.Component<void, Props, void> {
           var color = "green"
         }
 
-
-
-        var curLine;
-        svg.append("path")
-            .attr("class", "line")
-            .attr("d", function(){curLine = this; inputData[series].line = curLine; return line(inputData[series])})
-            .style("fill","none")
-            .style("stroke",color)
-            .style("stroke-width","2px")            
-
-        inputData[series].forEach(element => {
-          element.line = curLine;
-        }) 
-
+        drawLine(inputData[series],color)
       })   
     }
   
-
-
-
-
     var voronoiGroup = g.append("g")
         .attr("class", "voronoi")
         .style("fill","#FFFFFF")
         .style("stroke","#000000")
         .style("opacity","0")
 
-
     voronoiGroup.selectAll("path")
       .data(voronoi.polygons(data.map(function(d) {return d; })))
       .enter().append("path")
-        .attr("d", function(d) { return d ? "M" + d.join("L") + "Z" : null; })
+        .attr("d", function(d) {return d ? "M" + d.join("L") + "Z" : null; })
         .on("mouseover", mouseover)
         .on("mouseout", mouseout);
-
-
-
   }
 
 
