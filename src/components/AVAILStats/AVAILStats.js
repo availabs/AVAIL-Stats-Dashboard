@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router'
 import { browserHistory } from 'react-router'
-import { scaleLinear, scaleTime, axisLeft, axisBottom, extent, min, max} from 'd3'
+import { scaleLinear, scaleTime, axisLeft, axisBottom, extent, min, max, nest, merge} from 'd3'
 import classes from './AVAILStats.scss'
 import Select from 'react-select'
 import 'react-select/dist/react-select.css';
@@ -16,6 +16,10 @@ var d3line = shape.line
 
 var time = require('d3-time')
 var timeDay = time.timeDay
+
+
+var voronoiBig = require('d3-voronoi')
+var voronoiFunc = voronoiBig.voronoi
 
 
 export class AVAILStats extends React.Component<void, Props, void> {
@@ -123,6 +127,12 @@ export class AVAILStats extends React.Component<void, Props, void> {
           .domain(extent(data, function(d) {return +d.count; }));
     }
 
+    var voronoi = voronoiFunc()
+        .x(function(d) { var curDate = new Date(d.series); return x(curDate); })
+        .y(function(d) { return y(+d.count); })
+        .extent([[-margin.left, -margin.top], [width + margin.right, height + margin.bottom]])
+
+
 
     var xAxis = axisBottom(x); 
     var yAxis = axisLeft(y)
@@ -134,8 +144,8 @@ export class AVAILStats extends React.Component<void, Props, void> {
 
     var svg = select("#root").select("span").append("svg")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-      .append("g")
+        .attr("height", height + margin.top + margin.bottom),
+        g = svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     svg.append("g")
@@ -154,14 +164,27 @@ export class AVAILStats extends React.Component<void, Props, void> {
         .style("text-anchor", "end")
         .text("Price ($)");
 
+    function mouseover(d){
+      var mouseLine = d.data.line
+      select(mouseLine).style("stroke-width","4px")
+    }
+    function mouseout(d){
+      var mouseLine = d.data.line
+      select(mouseLine).style("stroke-width","2px")
+    }
 
     if(this.state.graph == "logins"){
+      var curLine;
       svg.append("path")
-          .datum(data)
           .attr("class", "line")
-          .attr("d", line)
+          .attr("d", function(){curLine = this; data.line = curLine; return line(data)})
           .style("fill","none")
-          .style("stroke","black");
+          .style("stroke","black")
+          .style("stroke-width","2px")            
+
+      data.forEach(element => {
+        element.line = curLine;
+      })             
     }
     else{
       Object.keys(inputData).forEach(series => {
@@ -174,14 +197,44 @@ export class AVAILStats extends React.Component<void, Props, void> {
         else{
           var color = "green"
         }
-      svg.append("path")
-          .datum(inputData[series])
-          .attr("class", "line")
-          .attr("d", line)
-          .style("fill","none")
-          .style("stroke",color);
-      })      
+
+
+
+        var curLine;
+        svg.append("path")
+            .attr("class", "line")
+            .attr("d", function(){curLine = this; inputData[series].line = curLine; return line(inputData[series])})
+            .style("fill","none")
+            .style("stroke",color)
+            .style("stroke-width","2px")            
+
+        inputData[series].forEach(element => {
+          element.line = curLine;
+        }) 
+
+      })   
     }
+  
+
+
+
+
+    var voronoiGroup = g.append("g")
+        .attr("class", "voronoi")
+        .style("fill","#FFFFFF")
+        .style("stroke","#000000")
+        .style("opacity","0")
+
+
+    voronoiGroup.selectAll("path")
+      .data(voronoi.polygons(data.map(function(d) {return d; })))
+      .enter().append("path")
+        .attr("d", function(d) { return d ? "M" + d.join("L") + "Z" : null; })
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout);
+
+
+
   }
 
 
