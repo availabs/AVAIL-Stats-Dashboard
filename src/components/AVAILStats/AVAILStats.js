@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router'
 import { browserHistory } from 'react-router'
-import { scaleLinear, scaleTime, axisLeft, axisBottom, extent, min, max } from 'd3'
+import { scaleLinear, scaleTime, axisLeft, axisBottom, extent, min, max} from 'd3'
 import classes from './AVAILStats.scss'
 import Select from 'react-select'
 import 'react-select/dist/react-select.css';
@@ -14,11 +14,16 @@ var selectAll = selection.selectAll
 var shape = require('d3-shape')
 var d3line = shape.line
 
+var time = require('d3-time')
+var timeDay = time.timeDay
+
+
 export class AVAILStats extends React.Component<void, Props, void> {
   constructor () {
     super()
     this.state = {
-      interval: 30
+      interval: 30,
+      graph: 'logins'
     }
     this.renderGraph = this.renderGraph.bind(this)
   }
@@ -47,18 +52,17 @@ export class AVAILStats extends React.Component<void, Props, void> {
         height = 450 - margin.top - margin.bottom;
 
 
-    console.log("graph",this.props)
     var x = scaleTime()
         .range([0, width])
-        .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }));
+        .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }))
 
- 
+
 
     var y = scaleLinear()
         .range([height, 0])
         .domain(extent(data, function(d) {return +d.count; }));
 
-    var xAxis = axisBottom(x) 
+    var xAxis = axisBottom(x); 
     var yAxis = axisLeft(y)
 
     var line = d3line()
@@ -109,27 +113,47 @@ export class AVAILStats extends React.Component<void, Props, void> {
       this.props.loadStatsData(this.state.interval)
       return <span />
     }
-    var selectOptions = [{value:7,label:"7 Days"},{value:30,label:"30 Days"},{value:90,label:"90 Days"}]
+    var intervalSelectOptions = [{value:7,label:"7 Days"},{value:30,label:"30 Days"},{value:90,label:"90 Days"}]
+    var graphSelectOptions = [{value:'logins',label:"Logins per day"},{value:'users',label:"Users past N days"}]
 
-    function selectChange (value){
+
+    function intervalSelectChange (value){
       console.log(value)
       if(value){
         scope.setState({interval:value.value})
       }
     }
 
-    console.log("render",this.props.AVAILStats[this.state.interval])
+    function graphSelectChange (value){
+      console.log(value)
+      if(value){
+        scope.setState({graph:value.value})
+      }
+    }
+
+    console.log("render",this)
     this.renderGraph(this.props.AVAILStats[this.state.interval])
     return (
       <div className="container">
         <span id="graphDiv" className="graphDiv"></span>
-        <div className={'col-xs-2 pull-left'} style={{float:"left"}}>
+        <div className="row col-xs-2 pull-left" style={{marginRight:"5px"}}>
           <Select 
           className={classes['Select']}
           name="metroSelect"
-          value={selectOptions.filter(d => { return d.value === this.state.interval })[0]}
-          options={selectOptions}
-          onChange={selectChange} 
+          value={graphSelectOptions.filter(d => { return d.value === this.state.graph })[0]}
+          options={graphSelectOptions}
+          onChange={graphSelectChange} 
+          placeholder="Graph Select"
+          clearable={false}
+          />  
+        </div>
+        <div className="row col-xs-2 pull-left" >
+          <Select 
+          className={classes['Select']}
+          name="metroSelect"
+          value={intervalSelectOptions.filter(d => { return d.value === this.state.interval })[0]}
+          options={intervalSelectOptions}
+          onChange={intervalSelectChange} 
           placeholder="Interval Select"
           clearable={false}
           />  
