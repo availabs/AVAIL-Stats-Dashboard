@@ -17,7 +17,6 @@ var d3line = shape.line
 var time = require('d3-time')
 var timeDay = time.timeDay
 
-
 var voronoiBig = require('d3-voronoi')
 var voronoiFunc = voronoiBig.voronoi
 
@@ -68,15 +67,12 @@ export class AVAILStats extends React.Component<void, Props, void> {
     }    
   }
 
-
   componentDidMount(){
     if(!this._hasData()){
       console.log("empty didmount")
       return this._getData()
     }
-
     this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
-
   }
 
   componentDidUpdate(){
@@ -84,19 +80,17 @@ export class AVAILStats extends React.Component<void, Props, void> {
       console.log("empty didupdate")
       return this._getData()
     }
-
-      this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
-
+    this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
   }
 
   renderGraph(inputData){
+    var scope = this;
     select("#root").select("span").select("svg").remove("*");
     console.log("rendergraph",inputData)
 
     var margin = {top: 20, right: 20, bottom: 30, left: 50},
         width = 780 - margin.left - margin.right,
         height = 450 - margin.top - margin.bottom;
-
 
     if(this.state.graph == "logins"){ 
       var data = inputData;
@@ -112,7 +106,6 @@ export class AVAILStats extends React.Component<void, Props, void> {
       //Flattens all data into one array for things like making axes
       var data = [];
       Object.keys(inputData).forEach(series => {
-        console.log(series)
         inputData[series].forEach(element => {
           data.push(element);
         })
@@ -132,15 +125,12 @@ export class AVAILStats extends React.Component<void, Props, void> {
         .y(function(d) { return y(+d.count); })
         .extent([[-margin.left, -margin.top], [width + margin.right, height + margin.bottom]])
 
-
-
     var xAxis = axisBottom(x); 
     var yAxis = axisLeft(y)
 
     var line = d3line()
       line.x(function(d) {var curDate = new Date(d.series); return x(curDate); })
       line.y(function(d) {return y(+d.count); });
-
 
     var svg = select("#root").select("span").append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -166,48 +156,31 @@ export class AVAILStats extends React.Component<void, Props, void> {
         .style("text-anchor", "end")
         .text("Price ($)");
 
-    var focus = g.append("g")
+    var focusCircle = g.append("g")
         .attr("transform", "translate(-100,-100)")
-        .attr("class", "focus");
+        .attr("class", "focusCircle");
 
-    focus.append("circle")
+    focusCircle.append("circle")
         .attr("r", 4.5)
         .style("fill","purple")
         .style("opacity","1");
 
+    var focusText = g.append("g")
+        .attr("transform", "translate(-100,-100)")
+        .attr("class", "focusText");
 
-    function mouseover(d){
-      var curDate = new Date(d.data.series);
-      focus.attr("transform", "translate(" + x(curDate) + "," + y(+d.data.count) + ")");
-      var mouseLine = d.data.line
-      select(mouseLine).style("stroke-width","4px")
-    }
-    function mouseout(d){
-      var mouseLine = d.data.line
-      select(mouseLine).style("stroke-width","2px")
-      focus.attr("transform", "translate(-100,-100)");
-    }
+    focusText.append("text")
+        .style("font-size", "11px");
 
-    function drawLine(data,color){
-      var curLine;
+    var focusLabel = g.append("g")
+        .attr("transform", "translate(-100,-100)")
+        .attr("class", "focusLabel");
 
-      var curColor = color ? color : "black"
-
-      svg.append("path")
-          .attr("class", "line")
-          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-          .attr("d", function(){curLine = this; data.line = curLine; return line(data)})
-          .style("fill","none")
-          .style("stroke",curColor)
-          .style("stroke-width","2px")  
-
-      data.forEach(element => {
-        element.line = curLine;
-      })            
-    }
+    focusLabel.append("text")
+        .style("font-size", "13px");
 
     if(this.state.graph == "logins"){
-      drawLine(data)     
+      drawLine(data,"black","logins")     
     }
     else{
       Object.keys(inputData).forEach(series => {
@@ -221,7 +194,7 @@ export class AVAILStats extends React.Component<void, Props, void> {
           var color = "green"
         }
 
-        drawLine(inputData[series],color)
+        drawLine(inputData[series],color,series)
       })   
     }
   
@@ -237,8 +210,53 @@ export class AVAILStats extends React.Component<void, Props, void> {
         .attr("d", function(d) {return d ? "M" + d.join("L") + "Z" : null; })
         .on("mouseover", mouseover)
         .on("mouseout", mouseout);
-  }
 
+    function mouseover(d){
+      var curDate = new Date(d.data.series);
+      var mouseLine = d.data.line
+      var classLabel = select(mouseLine).attr("class")
+
+      if(classLabel == "logins"){
+        focusLabel.attr("transform", "translate(20,10)");
+        focusLabel.select("text").text("Logins per Day")
+      }
+      else{
+        focusLabel.attr("transform", "translate(20,10)");
+        focusLabel.select("text").text("Unique users over the past "+classLabel+" days")        
+      }
+
+      focusCircle.attr("transform", "translate(" + x(curDate) + "," + y(+d.data.count) + ")");
+      focusText.select("text").text("Date: "+(d.data.series.split("T")[0]) +" | " + d.data.count);
+      focusText.attr("transform", "translate(20,30)");
+      select(mouseLine).style("stroke-width","4px")
+    }
+    function mouseout(d){
+      var mouseLine = d.data.line
+
+      select(mouseLine).style("stroke-width","2px")
+      focusCircle.attr("transform", "translate(-100,-100)");
+      focusText.attr("transform", "translate(-100,-100)");
+      focusLabel.attr("transform", "translate(-100,-100)");
+    }
+
+    function drawLine(data,color,className){
+      var curLine;
+
+      var curColor = color ? color : "black"
+
+      svg.append("path")
+          .attr("class", className)
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+          .attr("d", function(){curLine = this; data.line = curLine; return line(data)})
+          .style("fill","none")
+          .style("stroke",curColor)
+          .style("stroke-width","2px")  
+
+      data.forEach(element => {
+        element.line = curLine;
+      })            
+    }
+  }
 
   render(){
     var scope = this;
@@ -247,9 +265,9 @@ export class AVAILStats extends React.Component<void, Props, void> {
       this._getData()
       return <span />
     }
+
     var intervalSelectOptions = [{value:7,label:"7 Days"},{value:30,label:"30 Days"},{value:90,label:"90 Days"}]
     var graphSelectOptions = [{value:'logins',label:"Logins per day"},{value:'users',label:"Users past N days"}]
-
 
     function intervalSelectChange (value){
       console.log(value)
@@ -257,7 +275,6 @@ export class AVAILStats extends React.Component<void, Props, void> {
         scope.setState({interval:value.value})
       }
     }
-
     function graphSelectChange (value){
       console.log(value)
       if(value){
@@ -265,11 +282,9 @@ export class AVAILStats extends React.Component<void, Props, void> {
       }
     }
 
-
     this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
 
     var legend;
-
     if(this.state.graph == "users"){
       legend = (
         <div className="pull-left" style={{marginLeft:"20px"}}>
