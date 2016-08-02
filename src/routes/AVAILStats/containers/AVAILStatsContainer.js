@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import { loadStatsData, recieveStatsData } from '../modules/AVAILStats'
+import { loadLoginsData, loadUsersData} from '../modules/AVAILStats'
 
 /*  This is a container component. Notice it does not contain any JSX,
     nor does it import React. This component is **only** responsible for
@@ -13,11 +13,12 @@ import AVAILStats from 'components/AVAILStats'
     implementing our wrapper around increment; the component doesn't care   */
 
 const mapActionCreators = {
-  loadStatsData: (interval) => loadStatsData(interval)
+  loadLoginsData: (interval) => loadLoginsData(interval),
+  loadUsersData: (lineLength,timeLength) => loadUsersData(lineLength,timeLength)
 }
 
 const mapStateToProps = (state) => ({
-  AVAILStats: state.AVAILStats
+  AVAILStats: {logins:state.AVAILStats.logins,users:state.AVAILStats.users}
 })
 
 /*  Note: mapStateToProps is where you should use `reselect` to create selectors, ie:

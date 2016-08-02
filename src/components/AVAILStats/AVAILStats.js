@@ -26,41 +26,103 @@ export class AVAILStats extends React.Component<void, Props, void> {
       graph: 'logins'
     }
     this.renderGraph = this.renderGraph.bind(this)
+    this._hasData = this._hasData.bind(this)
+    this._getData = this._getData.bind(this)
   }
 
-  componentDidMount(){
-    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
-      console.log("empty")
-      return this.props.loadStatsData(this.state.interval)
+  _hasData(){
+    if(this.state.graph == "logins"){
+      return (this.props.AVAILStats && 
+        this.props.AVAILStats[this.state.graph] && 
+        this.props.AVAILStats[this.state.graph][this.state.interval])      
     }
-    this.renderGraph(this.props.AVAILStats[this.state.interval])    
+    if(this.state.graph == "users"){
+      return (this.props.AVAILStats && 
+        this.props.AVAILStats[this.state.graph] && 
+        this.props.AVAILStats[this.state.graph][this.state.interval] &&
+        this.props.AVAILStats[this.state.graph][this.state.interval][7] &&   
+        this.props.AVAILStats[this.state.graph][this.state.interval][30] &&   
+        this.props.AVAILStats[this.state.graph][this.state.interval][90]        
+        ) 
+    }    
+  }
+
+  _getData(){
+    if(this.state.graph == "logins"){
+      return this.props.loadLoginsData(this.state.interval)        
+    }
+    if(this.state.graph == "users"){
+      if(!this.props.AVAILStats[this.state.graph][this.state.interval]){
+        return this.props.loadUsersData(7,this.state.interval)                 
+      }
+      else if(!this.props.AVAILStats[this.state.graph][this.state.interval][30]){
+        return this.props.loadUsersData(30,this.state.interval)           
+      }
+      else if(!this.props.AVAILStats[this.state.graph][this.state.interval][90]){
+        return this.props.loadUsersData(90,this.state.interval)           
+      } 
+    }    
+  }
+
+
+  componentDidMount(){
+    if(!this._hasData()){
+      console.log("empty didmount")
+      return this._getData()
+    }
+
+    this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
+
   }
 
   componentDidUpdate(){
-    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
-      console.log("empty")
-      return this.props.loadStatsData(this.state.interval)
+    if(!this._hasData()){
+      console.log("empty didupdate")
+      return this._getData()
     }
-    this.renderGraph(this.props.AVAILStats[this.state.interval])    
+
+      this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
+
   }
 
-  renderGraph(data){
+  renderGraph(inputData){
     select("#root").select("span").select("svg").remove("*");
+    console.log("rendergraph",inputData)
 
     var margin = {top: 20, right: 20, bottom: 30, left: 50},
         width = 780 - margin.left - margin.right,
         height = 450 - margin.top - margin.bottom;
 
 
-    var x = scaleTime()
-        .range([0, width])
-        .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }))
+    if(this.state.graph == "logins"){ 
+      var data = inputData;
+      var x = scaleTime()
+          .range([0, width])
+          .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }))
 
+      var y = scaleLinear()
+          .range([height, 0])
+          .domain(extent(data, function(d) {return +d.count; }));
+    }
+    if(this.state.graph == "users"){
+      //Flattens all data into one array for things like making axes
+      var data = [];
+      Object.keys(inputData).forEach(series => {
+        console.log(series)
+        inputData[series].forEach(element => {
+          data.push(element);
+        })
+      })
 
+      var x = scaleTime()
+          .range([0, width])
+          .domain(extent(data, function(d) {var curDate = new Date(d.series); return curDate }))
 
-    var y = scaleLinear()
-        .range([height, 0])
-        .domain(extent(data, function(d) {return +d.count; }));
+      var y = scaleLinear()
+          .range([height, 0])
+          .domain(extent(data, function(d) {return +d.count; }));
+    }
+
 
     var xAxis = axisBottom(x); 
     var yAxis = axisLeft(y)
@@ -76,41 +138,58 @@ export class AVAILStats extends React.Component<void, Props, void> {
       .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+    svg.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(axisBottom(x));
+
+    svg.append("g")
+        .attr("class", "axis axis--y")
+        .call(axisLeft(y))
+      .append("text")
+        .attr("class", "axis-title")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Price ($)");
 
 
-
-  svg.append("g")
-      .attr("class", "axis axis--x")
-      .attr("transform", "translate(0," + height + ")")
-      .call(axisBottom(x));
-
-  svg.append("g")
-      .attr("class", "axis axis--y")
-      .call(axisLeft(y))
-    .append("text")
-      .attr("class", "axis-title")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Price ($)");
-
-  svg.append("path")
-      .datum(data)
-      .attr("class", "line")
-      .attr("d", line)
-      .style("fill","none")
-      .style("stroke","black");
-
-
+    if(this.state.graph == "logins"){
+      svg.append("path")
+          .datum(data)
+          .attr("class", "line")
+          .attr("d", line)
+          .style("fill","none")
+          .style("stroke","black");
+    }
+    else{
+      Object.keys(inputData).forEach(series => {
+        if(series == 7){
+          var color = "red"
+        }
+        else if(series == 30){
+          var color = "blue"
+        }
+        else{
+          var color = "green"
+        }
+      svg.append("path")
+          .datum(inputData[series])
+          .attr("class", "line")
+          .attr("d", line)
+          .style("fill","none")
+          .style("stroke",color);
+      })      
+    }
   }
 
 
   render(){
     var scope = this;
-    if(!this.props.AVAILStats || !this.props.AVAILStats[this.state.interval]){
-      console.log("empty")
-      this.props.loadStatsData(this.state.interval)
+    if(!this._hasData()){
+      console.log("empty render")
+      this._getData()
       return <span />
     }
     var intervalSelectOptions = [{value:7,label:"7 Days"},{value:30,label:"30 Days"},{value:90,label:"90 Days"}]
@@ -131,12 +210,25 @@ export class AVAILStats extends React.Component<void, Props, void> {
       }
     }
 
-    console.log("render",this)
-    this.renderGraph(this.props.AVAILStats[this.state.interval])
+
+    this.renderGraph(this.props.AVAILStats[this.state.graph][this.state.interval])
+
+    var legend;
+
+    if(this.state.graph == "users"){
+      legend = (
+        <div className="pull-left" style={{marginLeft:"20px"}}>
+          <div style={{color:"red"}}>7 days</div>
+          <div style={{color:"blue"}}>30 days</div>
+          <div style={{color:"green"}}>90 days</div>
+        </div>
+        )
+    }
+
     return (
       <div className="container">
         <span id="graphDiv" className="graphDiv"></span>
-        <div className="row col-xs-2 pull-left" style={{marginRight:"5px"}}>
+        <div id="intervalSelect" className="row col-xs-3 pull-left">
           <Select 
           className={classes['Select']}
           name="metroSelect"
@@ -146,8 +238,6 @@ export class AVAILStats extends React.Component<void, Props, void> {
           placeholder="Graph Select"
           clearable={false}
           />  
-        </div>
-        <div className="row col-xs-2 pull-left" >
           <Select 
           className={classes['Select']}
           name="metroSelect"
@@ -157,6 +247,7 @@ export class AVAILStats extends React.Component<void, Props, void> {
           placeholder="Interval Select"
           clearable={false}
           />  
+        {legend}
         </div>
       </div>
       )
@@ -164,7 +255,8 @@ export class AVAILStats extends React.Component<void, Props, void> {
 }
 
 AVAILStats.propTypes = {
-  loadStatsData: React.PropTypes.func.isRequired
+  loadLoginsData: React.PropTypes.func.isRequired,
+  loadUsersData: React.PropTypes.func.isRequired
 }
 
 const mapStateToProps = (state) => ({
